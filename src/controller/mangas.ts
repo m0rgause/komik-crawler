@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { get } from "../services/axios";
+import { get } from "@/services/axios";
 import { ApiResponse } from "../middleware";
-import { Logger } from "../utils/logger";
+import { timestampToDaysPassed } from "@/utils/func";
+const cheerio = require("cheerio");
 
 // Get all mangas with pagination
 export const getAllMangas = async (
@@ -14,23 +15,65 @@ export const getAllMangas = async (
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
-    // Contoh penggunaan service axios untuk crawling
-    // const mangas = await get('/api/mangas', { params: { limit, offset } });
+    let mangas = await get(`/latest/${page}`);
+    // Parse HTML response using cheerio
+    // const cheerio = require("cheerio");
+    const $ = cheerio.load(mangas.data as string);
 
-    // Mock data untuk contoh
-    const mockMangas = [
-      { id: 1, title: "One Piece", author: "Eiichiro Oda", status: "ongoing" },
-      {
-        id: 2,
-        title: "Naruto",
-        author: "Masashi Kishimoto",
-        status: "completed",
-      },
-    ];
+    const listMangas = $("div[q\\:key='MY_0'] > div");
+    const mangaList: any[] = [];
+
+    listMangas.each((index: number, element: any) => {
+      const titleElement = $(element).find("h3 a span");
+      const title = titleElement.text().trim();
+
+      const link = $(element).find("h3 a").attr("href");
+      const imageElement = $(element).find("img");
+      const image = imageElement.attr("src");
+      const alt = imageElement.attr("alt");
+
+      // Extract genres from the genre section
+      const genres: string[] = [];
+      $(element)
+        .find(".flex.flex-wrap.text-xs span span")
+        .each(function (_: any, genreEl: any) {
+          const genre = $(genreEl).text().trim();
+          if (genre && genre !== ",") {
+            genres.push(genre);
+          }
+        });
+
+      // Extract rating if available
+      const rating = $(element)
+        .find(".text-yellow-500 span.font-bold")
+        .text()
+        .trim();
+
+      // Extract latest chapter info
+      const latestChapter = $(element)
+        .find("a[class*='link-hover link-primary'] span")
+        .last()
+        .text()
+        .trim();
+
+      if (title) {
+        const mangaData = {
+          title,
+          link,
+          image,
+          alt,
+          genres,
+          rating: rating || null,
+          latestChapter: latestChapter || null,
+        };
+
+        mangaList.push(mangaData);
+      }
+    });
 
     const response: ApiResponse = {
       success: true,
-      data: mockMangas,
+      data: mangaList,
       pagination: {
         page,
         limit,
@@ -45,95 +88,74 @@ export const getAllMangas = async (
     next(error);
   }
 };
-
-// Get manga by ID
-export const getMangaById = async (
+export const getMangaBySlug = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
+    const { slug } = req.params;
+    let manga = await get(`/title/${slug}`);
+    const $ = cheerio.load(manga.data as string);
 
-    // Mock data
-    const manga = {
-      id: parseInt(id),
-      title: "One Piece",
-      author: "Eiichiro Oda",
-      status: "ongoing",
-    };
+    // Extract manga details
+    const title = $("h3.text-lg > a").first().text().trim();
+    const author = $("div.text-sm > a").first().text().trim();
+    const image = $("img").first().attr("src");
+    const description = $("div.limit-html-p").text().trim();
+    const language = $("div.whitespace-nowrap.overflow-hidden > span")
+      .eq(1)
+      .text()
+      .trim();
 
-    res.json(manga);
-  } catch (error) {
-    next(error);
-  }
-};
+    // Extract genres
+    const genres: any = {};
+    const genreElements = $("div.flex.items-center.flex-wrap > span");
+    genreElements.each(function (_: any, element: any) {
+      const val = $(element).attr("q:key");
+      const val_ = $(element).find("span").first().text().trim();
+      if (val && val_ && val !== "undefined") {
+        genres[_] = {
+          name: val_,
+          slug: val,
+        };
+      }
+    });
 
-// Create new manga
-export const createManga = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { title, author, status } = req.body;
+    // Extract chapters
+    const chapters: any[] = [];
+    const chapterElements = $("div.scrollable-panel >div >div");
+    chapterElements.each(function (_: any, element: any) {
+      const chapterTitle = $(element).find("div > a").first().text().trim();
+      const chapterLink = $(element).find("div > a").first().attr("href");
+      const chapterTimestamp = $(element).find("time").data("time");
 
-    Logger.info(`Creating new manga: ${title} by ${author}`);
+      if (chapterTitle && chapterLink) {
+        chapters.push({
+          title: chapterTitle,
+          link: chapterLink,
+          timestamp: chapterTimestamp,
+        });
+      }
+    });
 
-    // Logic untuk save ke database
-    const newManga = {
-      id: Date.now(),
+    const mangaData = {
       title,
+      language,
       author,
-      status,
-      createdAt: new Date().toISOString(),
+      image,
+      description,
+      genres,
+      chapters,
     };
 
-    Logger.success(`Manga created successfully: ${title} (ID: ${newManga.id})`);
-    res.status(201).json(newManga);
-  } catch (error) {
-    Logger.error(`Failed to create manga: ${error}`);
-    next(error);
-  }
-};
-
-// Update manga
-export const updateManga = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const { title, author, status } = req.body;
-
-    // Logic untuk update di database
-    const updatedManga = {
-      id: parseInt(id),
-      title,
-      author,
-      status,
-      updatedAt: new Date().toISOString(),
+    const response: ApiResponse = {
+      success: true,
+      data: mangaData,
+      timestamp: new Date().toISOString(),
     };
 
-    res.json(updatedManga);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Delete manga
-export const deleteManga = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-
-    // Logic untuk delete dari database
-
-    res.status(204).send();
+    res.json(response);
   } catch (error) {
     next(error);
   }
