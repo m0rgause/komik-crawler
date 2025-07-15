@@ -11,7 +11,7 @@ export const getAllMangas = async (
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = 36;
     const offset = (page - 1) * limit;
 
     let mangas = await get(`/latest/${page}`);
@@ -39,11 +39,14 @@ export const getAllMangas = async (
         | undefined;
 
       // Extract genres from the genre section
-      const genres: any = {};
+      const genres: string[] = [];
       $(element)
         .find(".flex.flex-wrap.text-xs span span")
         .each(function (_: any, genreEl: any) {
-          //     const genre = $(genreEl).text().trim();
+          const genre = $(genreEl).text().trim();
+          if (genre && genre !== ",") {
+            genres.push(genre);
+          }
         });
 
       // Extract rating if available
@@ -76,19 +79,14 @@ export const getAllMangas = async (
       }
     });
 
-    const lastPage = $("div.shrink > div.flex.items-center.flex-wrap > a")
-      .last()
-      .text()
-      .trim();
-
     const response: ApiResponse = {
       success: true,
       data: mangaList,
       pagination: {
         page,
         limit,
-        total: lastPage,
-        totalPages: Math.ceil(100 / limit),
+        total: 36 * 99,
+        totalPages: Math.ceil((36 * 99) / limit),
       },
       timestamp: new Date().toISOString(),
     };
