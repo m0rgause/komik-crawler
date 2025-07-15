@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { get } from "@/services/axios";
 import { ApiResponse } from "../middleware";
-import { timestampToDaysPassed } from "@/utils/func";
 const cheerio = require("cheerio");
 
 // Get all mangas with pagination
@@ -16,8 +15,6 @@ export const getAllMangas = async (
     const offset = (page - 1) * limit;
 
     let mangas = await get(`/latest/${page}`);
-    // Parse HTML response using cheerio
-    // const cheerio = require("cheerio");
     const $ = cheerio.load(mangas.data as string);
 
     const listMangas = $("div[q\\:key='MY_0'] > div");
@@ -32,15 +29,21 @@ export const getAllMangas = async (
       const image = imageElement.attr("src");
       const alt = imageElement.attr("alt");
 
+      // label
+      const label =
+        $(element).find("div[q\\:key='IP_3'] > span").text().trim() || null;
+
+      // last_updated
+      const last_updated = $(element).find("time").data("time") as
+        | string
+        | undefined;
+
       // Extract genres from the genre section
-      const genres: string[] = [];
+      const genres: any = {};
       $(element)
         .find(".flex.flex-wrap.text-xs span span")
         .each(function (_: any, genreEl: any) {
-          const genre = $(genreEl).text().trim();
-          if (genre && genre !== ",") {
-            genres.push(genre);
-          }
+          //     const genre = $(genreEl).text().trim();
         });
 
       // Extract rating if available
@@ -62,6 +65,8 @@ export const getAllMangas = async (
           link,
           image,
           alt,
+          label,
+          lastUpdated: last_updated ? last_updated : null,
           genres,
           rating: rating || null,
           latestChapter: latestChapter || null,
@@ -71,13 +76,18 @@ export const getAllMangas = async (
       }
     });
 
+    const lastPage = $("div.shrink > div.flex.items-center.flex-wrap > a")
+      .last()
+      .text()
+      .trim();
+
     const response: ApiResponse = {
       success: true,
       data: mangaList,
       pagination: {
         page,
         limit,
-        total: 100, // Total records dari database
+        total: lastPage,
         totalPages: Math.ceil(100 / limit),
       },
       timestamp: new Date().toISOString(),
