@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  komik-crawler-be:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: komik-crawler-be
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - app-network
