@@ -1,11 +1,6 @@
 import { Router } from "express";
 import { getAllMangas, getMangaBySlug } from "../controller/mangas";
-import {
-  validateId,
-  validatePagination,
-  validateManga,
-  crudLimiter,
-} from "../middleware";
+import { validateId, validatePagination, crudLimiter } from "../middleware";
 
 const router = Router();
 

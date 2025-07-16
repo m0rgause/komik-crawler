@@ -11,18 +11,37 @@ export const getAllMangas = async (
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
+    const search = req.query.search as string;
     const limit = 36;
     const offset = (page - 1) * limit;
 
-    let mangas = await get(`/latest/${page}`);
+    let path;
+    if (search) {
+      path = `/search?word=${encodeURIComponent(search)}&page=${page}`;
+    } else {
+      path = `/latest?page=${page}`;
+    }
+
+    const mangas = await get(path, {
+      params: {
+        limit,
+        offset,
+      },
+    });
+
     const $ = cheerio.load(mangas.data as string);
 
-    const listMangas = $("div[q\\:key='MY_0'] > div");
+    let listMangas;
+    if (search) {
+      listMangas = $("div[q\\:key='jp_1'] > div");
+    } else {
+      listMangas = $("div[q\\:key='MY_0'] > div");
+    }
     const mangaList: any[] = [];
 
     listMangas.each((index: number, element: any) => {
       const titleElement = $(element).find("h3 a span");
-      const title = titleElement.text().trim();
+      const title = titleElement.first().text().trim();
 
       const link = $(element).find("h3 a").attr("href");
       const imageElement = $(element).find("img");
