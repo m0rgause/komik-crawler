@@ -1,0 +1,73 @@
+services:
+  # Development Backend Service
+  komik-crawler-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: komik-crawler-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code untuk hot reload
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./nodemon.json:/usr/src/app/nodemon.json
+      # Node modules sebagai volume terpisah untuk performa
+      - node_modules:/usr/src/app/node_modules
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true  # Untuk file watching di Windows
+    restart: unless-stopped
+    networks:
+      - dev-network
+    # Optional: Database untuk development
+    depends_on:
+      - postgres-dev
+
+  # PostgreSQL Database untuk Development
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: komik-db-dev
+    environment:
+      POSTGRES_DB: komik_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      # Optional: Init scripts
+      # - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - dev-network
+
+  # Optional: pgAdmin untuk database management
+  pgadmin-dev:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@dev.com
+      PGADMIN_DEFAULT_PASSWORD: devpassword
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    networks:
+      - dev-network
+    depends_on:
+      - postgres-dev
+
+volumes:
+  node_modules:
+  postgres_dev_data:
+  pgadmin_dev_data:
+
+networks:
+  dev-network:
+    driver: bridge

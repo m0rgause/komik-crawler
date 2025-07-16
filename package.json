@@ -4,8 +4,12 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/app.ts",
-    "build": "tsc",
-    "start": "node dist/app.js"
+    "build": "tsc && tsc-alias",
+    "start": "node build/app.js",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
+    "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:prod": "docker-compose up --build",
+    "docker:prod:down": "docker-compose down"
   },
   "author": "",
   "license": "ISC",
@@ -33,6 +37,7 @@
     "@types/node": "^24.0.10",
     "prisma": "^6.11.1",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
