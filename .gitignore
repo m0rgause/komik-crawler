@@ -7,7 +7,5 @@ node_modules
 # Ignore build artifacts
 /build
 
-# Ignore Docker-related files
-Dockerfile
 # Ignore logs
 *.log
