@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { get } from "@/services/axios";
+import { get } from "../services/axios";
 import { ApiResponse } from "../middleware";
 const cheerio = require("cheerio");
 
