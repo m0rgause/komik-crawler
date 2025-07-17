@@ -37,10 +37,10 @@ COPY package*.json ./
 RUN npm install --only=production
 
 # Copy Prisma schema untuk generate client di production
-COPY prisma ./prisma
+# COPY prisma ./prisma
 
 # Generate Prisma client untuk production
-RUN npx prisma generate
+# RUN npx prisma generate
 
 # Copy hasil kompilasi dari stage 'build'
 # Output build ada di direktori 'build' dari stage 'build'
