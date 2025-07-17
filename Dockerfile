@@ -55,6 +55,7 @@ EXPOSE 3000
 
 # Set environment variable untuk produksi
 ENV NODE_ENV=production
+ENV SCRAPING_URL="https://mangapark.net/"
 # Anda bisa menambahkan ENV SCRAPING_URL="https://mangapark.net/" jika tidak ingin dari .env
 # Atau variabel lain yang dibutuhkan di runtime
 
